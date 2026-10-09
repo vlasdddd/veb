@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyLearnCamp — Бесплатный курс по Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a23;
+            --bg-light: #1b1b32;
+            --bg-lighter: #2a2a40;
+            --text-light: #f5f6f7;
+            --text-muted: #d0d0d5;
+            --accent: #feac32;
+            --success: #00471b;
+            --success-text: #acd8a7;
+            --error: #850000;
+            --error-text: #f5aca6;
+            --border: #3b3b4f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--bg-light);
+            border-bottom: 2px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 50px;
+            z-index: 10;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .progress-container {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background-color: var(--bg-light);
+            border-right: 2px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 5;
+        }
+
+        .sidebar-header {
+            padding: 15px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-dark);
+        }
+
+        .steps-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .step-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+        }
+
+        .step-item:hover {
+            background-color: var(--bg-lighter);
+        }
+
+        .step-item.active {
+            background-color: var(--bg-lighter);
+            border-left: 4px solid var(--accent);
+        }
+
+        .step-item.completed .icon::before {
+            content: "✓";
+            color: #2ed573;
+            font-weight: bold;
+        }
+
+        .step-item .icon {
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            flex-shrink: 0;
+        }
+
+        .step-item.completed .icon {
+            border-color: #2ed573;
+        }
+
+        /* Workspace */
+        .workspace {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .instructions {
+            width: 40%;
+            padding: 25px;
+            overflow-y: auto;
+            border-right: 2px solid var(--border);
+            background-color: var(--bg-dark);
+            line-height: 1.6;
+        }
+
+        .instructions h2 {
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+            color: var(--text-light);
+        }
+
+        .instructions p {
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .instructions code {
+            background-color: var(--bg-lighter);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: var(--accent);
+        }
+
+        .instructions pre {
+            background-color: var(--bg-light);
+            padding: 12px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 15px 0;
+            border: 1px solid var(--border);
+        }
+
+        .instructions pre code {
+            color: var(--text-light);
+            background: none;
+            padding: 0;
+        }
+
+        .editor-container {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            background-color: #1e1e1e;
+        }
+
+        .editor-header {
+            background-color: var(--bg-light);
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .code-editor {
+            flex: 1;
+            padding: 15px;
+            background-color: #050510;
+            color: #f8f8f2;
+            font-family: 'Fira Code', monospace;
+            font-size: 1rem;
+            border: none;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .controls {
+            padding: 12px 20px;
+            background-color: var(--bg-light);
+            border-top: 2px solid var(--border);
+            display: flex;
+            gap: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-run {
+            background-color: var(--accent);
+            color: var(--bg-dark);
+        }
+
+        .btn-run:hover {
+            background-color: #e59520;
+        }
+
+        .btn-next {
+            background-color: #2ed573;
+            color: white;
+            display: none;
+        }
+
+        .btn-next:hover {
+            background-color: #26af5f;
+        }
+
+        .output-panel {
+            height: 180px;
+            background-color: #000;
+            border-top: 2px solid var(--border);
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            overflow-y: auto;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .output-line {
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+        }
+
+        .output-error {
+            color: #ff6b6b;
+        }
+
+        .output-success {
+            color: #2ed573;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        /* Modal Overlay */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-light);
+            border: 2px solid var(--accent);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        .modal-content h2 {
+            color: var(--accent);
+            margin-bottom: 15px;
+            font-size: 2rem;
+        }
+
+        .modal-content p {
+            margin-bottom: 25px;
+            color: var(--text-muted);
+        }
+
+        /* Skulpt UI tweaks */
+        #canvas-container {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                flex-direction: column;
+            }
+            .instructions {
+                width: 100%;
+                height: 40%;
+                border-right: none;
+                border-bottom: 2px solid var(--border);
+            }
+            .editor-container {
+                width: 100%;
+                height: 60%;
+            }
+            .sidebar {
+                position: absolute;
+                left: 0;
+                top: 50px;
+                bottom: 0;
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+    <!-- Skulpt для интерпретации Python в браузере -->
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js" type="text/javascript"></script>
+</head>
+<body>
+
+    <header>
+        <div class="logo"><s></s>PyLearnCamp <span>(python)</span></div>
+        <div class="progress-container">Пройдено: <span id="progress-text">0/5</span></div>
+    </header>
+
+    <div class="main-container">
+        <!-- Навигация по курсу -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">Модули курса</div>
+            <ul class="steps-list" id="steps-list">
+                <!-- Заполняется динамически -->
+            </ul>
+        </aside>
+
+        <!-- Рабочее пространство -->
+        <main class="workspace">
+            <section class="instructions" id="instructions">
+                <!-- Описание шага -->
+            </section>
+
+            <section class="editor-container">
+                <div class="editor-header">main.py</div>
+                <textarea class="code-editor" id="code-editor" spellcheck="false" autocomplete="off"></textarea>
+                
+                <div class="controls">
+                    <button class="btn-run" id="btn-run">Выполнить код (Ctrl+Enter)</button>
+                    <button class="btn-next" id="btn-next">Следующий шаг →</button>
+                </div>
+
+                <div class="output-panel" id="output-panel">
+                    <div class="output-line" style="color: var(--text-muted);">// Вывод консоли появится здесь...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Модальное окно финала -->
+    <div class="modal" id="finish-modal">
+        <div class="modal-content">
+            <h2>Поздравляем! 🎉</h2>
+            <p>Вы успешно завершили полный базовый курс по Python и освоили фундаментальные концепции программирования.</p>
+            <button class="btn-run" onclick="location.reload()" style="border-radius:4px;">Пройти заново</button>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="text/javascript">
+        // База данных интерактивного курса
+        const courseData = [
+            {
+                id: 1,
+                title: "1. Вывод данных и синтаксис",
+                description: `<h2>Введение в Python</h2>
+                <p>Добро пожаловать в Python! Это один из самых популярных и читаемых языков программирования в мире.</p>
+                <p>Основным инструментом для отображения информации на экране является функция <code>print()</code>. Текст обязательно нужно заключать в кавычки.</p>
+                <p><strong>Пример:</strong></p>
+                <pre><code>print("Привет, мир!")</code></pre>
+                <p><strong>Задание:</strong> Измените код в редакторе так, чтобы программа вывела на экран строку <code>Hello, PyLearnCamp</code></p>`,
+                initialCode: '# Напишите ваш код ниже
+print("Измени меня")',
+                validate: (code, output) => {
+                    return output.trim() === "Hello, PyLearnCamp";
+                },
+                hint: "Убедитесь, что строка в точности совпадает с 'Hello, PyLearnCamp' (проверьте регистр букв)."
+            },
+            {
+                id: 2,
+                title: "2. Переменные и типы данных",
+                description: `<h2>Переменные</h2>
+                <p>Переменные используются для хранения данных. В Python не нужно объявлять тип переменной заранее — интерпретатор поймет его сам.</p>
+                <pre><code>name = "Алексей"  # Строка (str)
+age = 25          # Целое число (int)</code></pre>
+                <p><strong>Задание:</strong> Создайте переменную с именем <code>course</code> и присвойте ей строковое значение <code>Python</code>. Затем выведите эту переменную на экран с помощью функции <code>print(course)</code>.</p>`,
+                initialCode: '# Создайте переменную course и выведите её
+',
+                validate: (code, output) => {
+                    return code.includes("course") && output.trim() === "Python";
+                },
+                hint: "Код должен содержать строку вида course = "Python" и вызов print(course)."
+            },
+            {
+                id: 3,
+                title: "3. Условный оператор if-else",
+                description: `<h2>Управление потоком</h2>
+                <p>Конструкция <code>if-else</code> позволяет выполнять разный код в зависимости от условий. В Python блоки кода выделяются <strong>отступами</strong> (4 пробела).</p>
+                <pre><code>if x > 10:
+    print("Больше 10")
+else:
+    print("Меньше или равно 10")</code></pre>
+                <p><strong>Задание:</strong> Задана переменная <code>score = 85</code>. Напишите условие: если <code>score</code> больше или равен 70, выведите <code>Зачет</code>, иначе выведите <code>Незачет</code>.</p>`,
+                initialCode: 'score = 85
+# Напишите ваше условие ниже
+',
+                validate: (code, output) => {
+                    return output.trim() === "Зачет";
+                },
+                hint: "Используйте двоеточие после условий и не забывайте про отступы для print()."
+            },
+            {
+                id: 4,
+                title: "4. Циклы (for и списки)",
+                description: `<h2>Циклы и списки</h2>
+                <p>Списки (<code>list</code>) позволяют хранить коллекции элементов. С помощью цикла <code>for</code> можно перебрать каждый элемент списка.</p>
+                <pre><code>fruits = ["яблоко", "банан"]
+for fruit in fruits:
+    print(fruit)</code></pre>
+                <p><strong>Задание:</strong> Напишите цикл <code>for</code>, который переберет список чисел <code>numbers</code> и выведет каждое число на новой строке.</p>`,
+                initialCode: 'numbers = [1, 2, 3, 4, 5]
+# Напишите цикл здесь
+',
+                validate: (code, output) => {
+                    const lines = output.trim().split('\n').map(Number);
+                    return JSON.stringify(lines) === "[1,2,3,4,5]";
+                },
+                hint: "Синтаксис цикла: for num in numbers: а затем на следующей строке с отступом print(num)."
+            },
+            {
+                id: 5,
+                title: "5. Функции",
+                description: `<h2>Создание функций</h2>
+                <p>Функции помогают группировать код для повторного использования. Они объявляются ключевым словом <code>def</code> и могут возвращать значение через <code>return</code>.</p>
+                <pre><code>def greet(name):
+    return "Привет, " + name</code></pre>
+                <p><strong>Задание:</strong> Создайте функцию с именем <code>square</code>, которая принимает один аргумент <code>x</code> и возвращает его квадрат (<code>x * x</code>). Код вызова функции уже написан.</p>`,
+                initialCode: '# Напишите функцию square здесь
+
+
+# Не меняйте код ниже
+print(square(6))',
+                validate: (code, output) => {
+                    return code.includes("def square") && output.trim() === "36";
+                },
+                hint: "Функция должна принимать аргумент, внутри делать return x * x или return x ** 2."
+            }
+        ];
+
+        let currentStepIndex = 0;
+        let completedSteps = new Set(JSON.parse(localStorage.getItem('pyCampCompleted')) || []);
+
+        const sidebarList = document.getElementById('steps-list');
+        const instructionsPanel = document.getElementById('instructions');
+        const codeEditor = document.getElementById('code-editor');
+        const outputPanel = document.getElementById('output-panel');
+        const btnRun = document.getElementById('btn-run');
+        const btnNext = document.getElementById('btn-next');
+        const progressText = document.getElementById('progress-text');
+
+        // Инициализация структуры курса
+        function initCourse() {
+            sidebarList.innerHTML = '';
+            courseData.forEach((step, index) => {
+                const li = document.createElement('li');
+                li.className = `step-item ${index === currentStepIndex ? 'active' : ''} ${completedSteps.has(step.id) ? 'completed' : ''}`;
+                li.innerHTML = `<div class="icon"></div><span>${step.title}</span>`;
+                li.addEventListener('click', () => loadStep(index));
+                sidebarList.appendChild(li);
+            });
+            updateProgressHeader();
+        }
+
+        function updateProgressHeader() {
+            progressText.innerText = `${completedSteps.size}/${courseData.length}`;
+        }
+
+        // Загрузка шага
+        function loadStep(index) {
+            currentStepIndex = index;
+            const step = courseData[index];
+
+            // Обновление активного класса в UI
+            document.querySelectorAll('.step-item').forEach((item, idx) => {
+                item.classList.toggle('active', idx === index);
+            });
+
+            instructionsPanel.innerHTML = step.description;
+            codeEditor.value = step.initialCode;
+            outputPanel.innerHTML = '<div class="output-line" style="color: var(--text-muted);">// Вывод консоли появится здесь...</div>';
+            btnNext.style.display = 'none';
+        }
+
+        // Настройка Skulpt среды
+        function builtinRead(x) {
+            if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+                throw "File not found: '" + x + "'";
+            return Sk.builtinFiles["files"][x];
+        }
+
+        function runPython() {
+            const code = codeEditor.value;
+            outputPanel.innerHTML = '';
+            let outputBuffer = '';
+
+            Sk.configure({
+                output: function(text) {
+                    outputBuffer += text;
+                    const cleanText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    outputPanel.innerHTML += `<div class="output-line">${cleanText}</div>`;
+                },
+                read: builtinRead
+            });
+
+            Sk.misceval.asyncToPromise(function() {
+                return Sk.importMainWithBody("<stdin>", false, code, true);
+            }).then(function(mod) {
+                // Успешное выполнение скрипта, запускаем валидацию задачи
+                validateChallenge(code, outputBuffer);
+            }, function(err) {
+                // Ошибка в коде Python
+                outputPanel.innerHTML += `<div class="output-line output-error">${err.toString()}</div>`;
+            });
+        }
+
+        // Валидация решения
+        function validateChallenge(code, output) {
+            const currentStep = courseData[currentStepIndex];
+            const isCorrect = currentStep.validate(code, output);
+
+            if (isCorrect) {
+                outputPanel.innerHTML += `<div class="output-line output-success">✓ Тесты пройдены успешно! Отличная работа.</div>`;
+                completedSteps.add(currentStep.id);
+                localStorage.setItem('pyCampCompleted', JSON.stringify([...completedSteps]));
+                
+                // Обновляем статус в левом меню
+                const listItems = sidebarList.querySelectorAll('.step-item');
+                listItems[currentStepIndex].classList.add('completed');
+                updateProgressHeader();
+
+                // Показываем кнопку перехода
+                btnNext.style.display = 'block';
+            } else {
+                outputPanel.innerHTML += `<div class="output-line output-error">✗ Проверка не удалась. Подсказка: ${currentStep.hint}</div>`;
+            }
+        }
+
+        // Обработчики кнопок
+        btnRun.addEventListener('click', runPython);
+
+        btnNext.addEventListener('click', () => {
+            if (currentStepIndex < courseData.length - 1) {
+                loadStep(currentStepIndex + 1);
+            } else {
+                document.getElementById('finish-modal').style.display = 'flex';
+            }
+        });
+
+        // Горячие клавиши (Ctrl + Enter для запуска)
+        window.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runPython();
+            }
+        });
+
+        // Старт
+        initCourse();
+        loadStep(0);
+    </script>
+</body>
+</html>

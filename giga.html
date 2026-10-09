@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyCamp: Курс Python в браузере</title>
+    <!-- CodeMirror (Редактор кода) -->
+    <link rel="stylesheet" href="https://unpkg.com/codemirror@5.65.13/lib/codemirror.css">
+    <script src="https://unpkg.com/codemirror@5.65.13/lib/codemirror.js"></script>
+    <script src="https://unpkg.com/codemirror@5.65.13/mode/python/python.js"></script>
+    <!-- xterm.js (Терминал) -->
+    <link rel="stylesheet" href="https://unpkg.com/xterm@5.3.0/css/xterm.css">
+    <script src="https://unpkg.com/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://unpkg.com/xterm@5.3.0/lib/addon/fit/fit.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #1e1e1e;
+            --bg-sidebar: #252526;
+            --text-light: #d4d4d4;
+            --accent: #007acc;
+            --success: #008000;
+        }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-dark); color: var(--text-light); display: flex; flex-direction: column; }
+        header { background: var(--bg-sidebar); padding: 15px 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        h1 { margin: 0; font-size: 1.2rem; color: var(--accent); }
+        .progress-container { font-size: 0.9rem; }
+        .main-content { flex: 1; display: flex; overflow: hidden; }
+        .sidebar { width: 250px; background: var(--bg-sidebar); border-right: 1px solid #333; overflow-y: auto; }
+        .lesson-list { list-style: none; padding: 0; margin: 0; }
+        .lesson-item { padding: 12px 20px; cursor: pointer; border-left: 3px solid transparent; font-size: 0.9rem; }
+        .lesson-item:hover { background: #333; }
+        .lesson-item.active { background: #333; border-left-color: var(--accent); }
+        .lesson-item.completed { color: var(--success); }
+        .main-area { flex: 1; display: flex; flex-direction: column; }
+        .task-area { flex: 1; display: flex; border-bottom: 1px solid #333; }
+        .theory-panel, .editor-panel { flex: 1; padding: 20px; overflow-y: auto; }
+        .theory-panel { background: #2d2d2d; border-right: 1px solid #333; }
+        .editor-panel { position: relative; }
+        #editor { height: 100%; border: none; }
+        .controls { padding: 15px 20px; background: var(--bg-sidebar); display: flex; gap: 10px; }
+        button { background: var(--accent); border: none; color: white; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #005a99; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #terminal-container { height: 250px; background: #000; }
+        .hidden { display: none; }
+        pre { background: #111; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        code { font-family: "Fira Code", monospace; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🐍 PyCamp: Изучаем Python</h1>
+    <div class="progress-container">Прогресс: <span id="progress-text">0%</span></div>
+</header>
+
+<div class="main-content">
+    <aside class="sidebar">
+        <ul class="lesson-list" id="lesson-list"></ul>
+    </aside>
+
+    <div class="main-area">
+        <div class="task-area">
+            <div class="theory-panel">
+                <h2 id="lesson-title"></h2>
+                <div id="lesson-content"></div>
+            </div>
+            <div class="editor-panel">
+                <div id="editor"></div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="run-btn">▶️ Выполнить код</button>
+            <button id="check-btn" disabled>✅ Проверить решение</button>
+            <button id="next-btn" class="hidden">Следующий урок →</button>
+        </div>
+
+        <div id="terminal-container"></div>
+    </div>
+</div>
+
+<!-- Скрипт перенесен в конец body, чтобы элементы точно существовали -->
+<script>
+const lessons = [
+    {id: 0, title: "Задание 1: Привет, мир!", content: "<p>Ваша первая задача — вывести текст в консоль. Для этого используется функция <code>print()</code>.</p>", initialCode: 'print("Привет, PyCamp!")', solution: 'print("Привет, PyCamp!")'},
+    {id: 1, title: "Задание 2: Переменные", content: "<p>Создайте переменную <code>name</code> и выведите <code>Привет, [Имя]!</code>.</p>", initialCode: 'name = ""\nprint("Привет, " + name + "!")', solution: 'name = "Иван"\nprint("Привет, " + name + "!")'}
+];
+
+let pyodide = null;
+let editor = null;
+let terminal = null;
+let fitAddon = null;
+let currentLesson = 0;
+const completedLessons = new Set(JSON.parse(localStorage.getItem('pycamp_progress') || '[]'));
+
+function renderSidebar() {
+    const list = document.getElementById('lesson-list');
+    lessons.forEach(lesson => {
+        const li = document.createElement('li');
+        li.className = 'lesson-item';
+        if (lesson.id === currentLesson) li.classList.add('active');
+        if (completedLessons.has(lesson.id)) li.classList.add('completed');
+        li.textContent = lesson.title;
+        li.onclick = () => changeLesson(lesson.id);
+        list.appendChild(li);
+    });
+}
+
+function updateLessonView() {
+    const lesson = lessons[currentLesson];
+    document.getElementById('lesson-title').textContent = lesson.title;
+    document.getElementById('lesson-content').innerHTML = lesson.content;
+    editor.setValue(lesson.initialCode);
+    document.getElementById('next-btn').classList.add('hidden');
+    document.getElementById('check-btn').classList.remove('hidden');
+    document.getElementById('check-btn').disabled = false;
+    updateProgress();
+}
+
+function changeLesson(id) {
+    if (completedLessons.has(id)) {
+        currentLesson = id;
+        updateLessonView();
+    }
+}
+
+function initEditor() {
+    editor = CodeMirror(document.getElementById('editor'), {
+        value: '', mode: 'python', lineNumbers: true, theme: 'monokai', indentUnit: 4, tabSize: 4
+    });
+}
+
+function initTerminal() {
+    terminal = new Terminal({cursorBlink: true, theme: {background: '#000000'}});
+    fitAddon = new FitAddon.FitAddon();
+    terminal.loadAddon(fitAddon);
+    terminal.open(document.getElementById('terminal-container'));
+    fitAddon.fit();
+    terminal.writeln("Терминал готов.");
+}
+
+function runCode() {
+    const code = editor.getValue();
+    terminal.clear();
+    terminal.writeln(">>> " + code.split('\n').join('\n>>> '));
+    if (!pyodide) {
+        terminal.writeln("Python еще загружается. Подождите...");
+        return;
+    }
+    pyodide.runPython(`
+import io, sys
+old_stdout = sys.stdout
+sys.stdout = io.StringIO()
+try:
+    ${code}
+    output = sys.stdout.getvalue()
+except Exception as e:
+    output = "Ошибка: " + str(e)
+finally:
+    sys.stdout = old_stdout
+print(output)
+`);
+}
+
+function checkSolution() {
+    const lesson = lessons[currentLesson];
+    const userCode = editor.getValue().replace(/#.*/g, '').replace(/\s+/g, '');
+    const solution = lesson.solution.replace(/#.*/g, '').replace(/\s+/g, '');
+    if (userCode === solution) {
+        completedLessons.add(lesson.id);
+        localStorage.setItem('pycamp_progress', JSON.stringify([...completedLessons]));
+        document.getElementById('check-btn').disabled = true;
+        document.getElementById('next-btn').classList.remove('hidden');
+        updateProgress();
+        terminal.writeln("\n✅ Отлично! Решение верное.");
+    } else {
+        terminal.writeln("\n❌ Решение неверное.");
+    }
+}
+
+function updateProgress() {
+    const percent = Math.round((completedLessons.size / lessons.length) * 100);
+    document.getElementById('progress-text').textContent = percent + '%';
+}
+
+// Инициализация интерфейса
+renderSidebar();
+initEditor();
+initTerminal();
+
+// Привязка кнопок (гарантируем, что элементы есть)
+document.getElementById('run-btn').onclick = runCode;
+document.getElementById('check-btn').onclick = checkSolution;
+document.getElementById('next-btn').onclick = () => {
+    if (currentLesson < lessons.length - 1) {
+        currentLesson++;
+        updateLessonView();
+    }
+};
+
+// Загрузка Pyodide
+terminal.writeln("Загрузка Python (Pyodide)...");
+loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/" }).then((loadedPyodide) => {
+    pyodide = loadedPyodide;
+    terminal.writeln("Python загружен! Можно выполнять код.");
+}).catch((err) => {
+    terminal.writeln("Ошибка загрузки Python: " + err.message);
+});
+
+// Диагностика: если кнопки не работают через 30 секунд
+setTimeout(() => {
+    const btn = document.getElementById('run-btn');
+    if (btn.onclick === null) {
+        console.error("Кнопки не инициализированы. Ошибка в JS выше.");
+    }
+}, 30000);
+</script>
+</body>
+</html>
