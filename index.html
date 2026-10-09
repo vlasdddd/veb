@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Мои файлы</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      background:
+        linear-gradient(rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15)),
+        url("background.jpg") center / cover no-repeat fixed;
+    }
+
+    .particles {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .particle {
+      position: absolute;
+      bottom: -15px;
+      border-radius: 50%;
+      background: #000;
+      opacity: 0;
+      animation: rise linear infinite;
+    }
+
+    @keyframes rise {
+      0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 0.8;
+      }
+
+      90% {
+        opacity: 0.55;
+      }
+
+      100% {
+        transform: translateY(-105vh) translateX(35px);
+        opacity: 0;
+      }
+    }
+
+    main {
+      position: relative;
+      z-index: 1;
+      width: min(90%, 520px);
+      margin: 10vh auto;
+      padding: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #fff;
+      background: rgba(0, 0, 0, 0.22);
+      box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(3px);
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      color: #fff;
+      font-size: 30px;
+      letter-spacing: 1px;
+      text-shadow: 2px 2px 5px #000;
+    }
+
+    nav {
+      display: grid;
+      gap: 10px;
+    }
+
+    a {
+      display: block;
+      padding: 14px 16px;
+      border: 1px solid #fff;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.72);
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s, transform 0.2s;
+    }
+
+    a:hover,
+    a:focus-visible {
+      color: #111;
+      background: #fff;
+      transform: translateX(5px);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .particle {
+        animation: none;
+      }
+
+      a {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="particles" aria-hidden="true"></div>
+
+  <main>
+    <h1>Мои файлы</h1>
+
+    <nav aria-label="Навигация по файлам">
+      <a href="cursor.html">Cursor</a>
+      <a href="duck.html">Duck</a>
+      <a href="gemeni.html">Gemeni</a>
+      <a href="giga.html">Giga</a>
+      <a href="qwen.html">Qwen</a>
+      <a href="z_agent.html">Z Agent</a>
+    </nav>
+  </main>
+
+  <script>
+    const container = document.querySelector(".particles");
+
+    for (let i = 0; i < 100; i++) {
+      const particle = document.createElement("span");
+      particle.className = "particle";
+
+      const size = 3 + Math.random() * 7;
+      particle.style.left = `${Math.random() * 100}%`;
+      particle.style.width = `${size}px`;
+      particle.style.height = `${size}px`;
+      particle.style.animationDuration = `${3 + Math.random() * 5}s`;
+      particle.style.animationDelay = `${Math.random() * 6}s`;
+
+      container.appendChild(particle);
+    }
+  </script>
+</body>
+</html>
