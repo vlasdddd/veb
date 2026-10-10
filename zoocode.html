@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Python — интерактивный курс</title>
+
+  <!-- CodeMirror: редактор с подсветкой синтаксиса -->
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+
+  <!-- Pyodide: запуск Python прямо в браузере -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.js"></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090b14;
+      --text: #f4f5ff;
+      --muted: #929bb5;
+      --accent: #a78bfa;
+      --accent-bright: #c4b5fd;
+      --cyan: #67e8f9;
+      --border: rgba(178, 164, 255, .15);
+      --success: #6ee7b7;
+      --error: #fb7185;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 15% 5%, rgba(124, 58, 237, .19), transparent 34rem),
+        radial-gradient(ellipse at 90% 80%, rgba(34, 211, 238, .09), transparent 32rem),
+        var(--bg);
+      font: 16px/1.7 Inter, ui-sans-serif, system-ui, -apple-system,
+        "Segoe UI", sans-serif;
+    }
+
+    button, textarea { font: inherit; }
+
+    button {
+      padding: 13px 21px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      color: #130d27;
+      background: linear-gradient(135deg, var(--accent-bright), var(--accent));
+      box-shadow: 0 8px 28px rgba(139, 92, 246, .22);
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+      box-shadow: 0 12px 34px rgba(139, 92, 246, .32);
+    }
+
+    button:active:not(:disabled) { transform: translateY(0); }
+
+    button:disabled {
+      color: #777f98;
+      background: #202436;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .screen {
+      width: min(900px, 100%);
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .welcome {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .welcome-card {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      padding: clamp(32px, 8vw, 76px);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background:
+        linear-gradient(135deg, rgba(167,139,250,.10), transparent 48%),
+        rgba(17, 21, 34, .88);
+      box-shadow: 0 30px 100px rgba(0,0,0,.38);
+      backdrop-filter: blur(18px);
+    }
+
+    .welcome-card::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      top: -130px;
+      right: -80px;
+      border-radius: 50%;
+      background: rgba(103, 232, 249, .12);
+      filter: blur(5px);
+      pointer-events: none;
+    }
+
+    .logo {
+      display: grid;
+      width: 72px;
+      height: 72px;
+      place-items: center;
+      margin-bottom: 24px;
+      border: 1px solid rgba(196,181,253,.28);
+      border-radius: 22px;
+      background: linear-gradient(
+        145deg,
+        rgba(167,139,250,.24),
+        rgba(103,232,249,.08)
+      );
+      font-size: 38px;
+    }
+
+    h1 {
+      max-width: 720px;
+      margin: 8px 0 18px;
+      font-size: clamp(36px, 7vw, 64px);
+      line-height: 1.04;
+      letter-spacing: -2.5px;
+      background: linear-gradient(100deg, #fff 15%, #c4b5fd 62%, #67e8f9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    h2 {
+      margin-top: 34px;
+      color: #e8e7ff;
+      font-size: 22px;
+      letter-spacing: -.4px;
+    }
+
+    p { color: #c3c9dc; }
+
+    .muted, .topline, .hint { color: var(--muted); }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      margin: -40px -24px 36px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(9, 11, 20, .88);
+      backdrop-filter: blur(18px);
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .progress-wrap {
+      height: 8px;
+      margin-top: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.05);
+      border-radius: 99px;
+      background: #202438;
+    }
+
+    #progressBar {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--cyan));
+      box-shadow: 0 0 18px rgba(103,232,249,.45);
+      transition: width .35s ease;
+    }
+
+    .card {
+      margin: 24px 0;
+      padding: clamp(20px, 4vw, 30px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(23,28,44,.98), rgba(15,18,30,.98));
+      box-shadow: 0 18px 50px rgba(0,0,0,.2);
+    }
+
+    pre {
+      width: 100%;
+      padding: 18px;
+      overflow: auto;
+      border: 1px solid rgba(103,232,249,.16);
+      border-radius: 14px;
+      color: #c7f9e9;
+      background: #090d16;
+      font: 14px/1.75 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      box-shadow: inset 0 1px 12px rgba(0,0,0,.24);
+    }
+
+    /* CodeMirror editor */
+    .CodeMirror {
+      height: 180px;
+      border: 1px solid rgba(103,232,249,.16);
+      border-radius: 14px;
+      font: 14px/1.75 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    .CodeMirror-focused {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(167,139,250,.15);
+    }
+
+    .hint { font-size: 14px; }
+
+    #feedback {
+      min-height: 28px;
+      margin-top: 14px;
+      font-weight: 700;
+    }
+
+    .ok { color: var(--success); }
+    .bad { color: var(--error); }
+
+    .terminal {
+      margin: 20px 0;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #090d16;
+    }
+
+    .terminal-title {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      background: #111522;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+
+    #terminalOutput {
+      min-height: 90px;
+      max-height: 260px;
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      border: 0;
+      border-radius: 0;
+      color: #c7f9e9;
+      white-space: pre-wrap;
+      box-shadow: none;
+    }
+
+    .terminal button {
+      margin: 0 12px 12px;
+    }
+
+    .bottom {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 30px;
+    }
+
+    #courseScreen { display: none; }
+
+    @media (max-width: 600px) {
+      .screen { padding: 24px 16px; }
+
+      .topbar {
+        margin: -24px -16px 28px;
+        padding: 16px;
+      }
+
+      .topline {
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .welcome-card { border-radius: 22px; }
+      h1 { letter-spacing: -1.5px; }
+      .bottom button { padding: 11px 14px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section id="welcomeScreen" class="screen welcome">
+    <div class="welcome-card">
+      <div class="logo">🐍</div>
+      <p class="muted">ИНТЕРАКТИВНЫЙ КУРС</p>
+      <h1>Изучи Python с нуля</h1>
+      <p>
+        Осваивай программирование шаг за шагом: изучай примеры,
+        выполняй задания и открывай новые темы.
+      </p>
+      <button id="startButton">Начать курс →</button>
+    </div>
+  </section>
+
+  <main id="courseScreen" class="screen">
+    <div class="topbar">
+      <div class="topline">
+        <span>🐍 Python: с нуля</span>
+        <span id="progressText"></span>
+      </div>
+      <div class="progress-wrap">
+        <div id="progressBar"></div>
+      </div>
+    </div>
+
+    <div id="lessonContent"></div>
+  </main>
+
+  <script>
+    const lessons = [
+      {
+        title: "Привет, Python!",
+        section: "01 · Первые шаги",
+        text: "Python — популярный язык программирования с понятным синтаксисом. Программы состоят из инструкций, которые компьютер выполняет по порядку.",
+        example: 'print("Привет, мир!")',
+        task: "Напиши команду print(), которая выводит слово Python.",
+        answer: 'print("Python")',
+        hint: "Текст нужно заключить в кавычки."
+      },
+      {
+        title: "Переменные",
+        section: "01 · Первые шаги",
+        text: "Переменная хранит значение, к которому можно обратиться по имени. Для присваивания в Python используется знак =.",
+        example: 'name = "Аня"\nprint(name)',
+        task: "Создай переменную age и присвой ей число 15.",
+        answer: "age = 15",
+        hint: "Напиши имя переменной, знак равенства и число."
+      },
+      {
+        title: "Числа и вычисления",
+        section: "01 · Первые шаги",
+        text: "Python умеет выполнять арифметические операции: сложение +, вычитание -, умножение * и деление /.",
+        example: "total = 7 + 3\nprint(total)  # 10",
+        task: "Создай переменную result и запиши в неё сумму 8 и 4.",
+        answer: "result = 8 + 4",
+        hint: "Выражение можно записать справа от знака =."
+      },
+      {
+        title: "Условия",
+        section: "02 · Управление программой",
+        text: "Условие if позволяет выполнить код, только если выражение истинно. Блок после if выделяется отступом.",
+        example: 'temperature = 22\nif temperature > 20:\n    print("Тепло")',
+        task: "Если score больше 10, выведи слово Победа.",
+        answer: 'if score > 10:\n    print("Победа")',
+        hint: "Поставь двоеточие после условия и добавь отступ перед print()."
+      },
+      {
+        title: "Цикл for",
+        section: "02 · Управление программой",
+        text: "Цикл for повторяет действия для каждого элемента последовательности. range(3) создаёт числа 0, 1 и 2.",
+        example: "for number in range(3):\n    print(number)",
+        task: "Напиши цикл for, который выводит числа от 0 до 2.",
+        answer: "for number in range(3):\n    print(number)",
+        hint: "Используй range(3) и print(number) внутри цикла."
+      },
+      {
+        title: "Списки",
+        section: "03 · Коллекции данных",
+        text: "Список хранит несколько значений в определённом порядке. Элементы записываются в квадратных скобках.",
+        example: 'fruits = ["яблоко", "груша"]\nprint(fruits[0])',
+        task: "Создай список colors из строк red и blue.",
+        answer: 'colors = ["red", "blue"]',
+        hint: "Используй квадратные скобки и кавычки вокруг строк."
+      },
+      {
+        title: "Функции",
+        section: "04 · Функции",
+        text: "Функция — именованный блок кода, который можно вызывать повторно. Функция объявляется с помощью def.",
+        example: 'def greet():\n    print("Привет!")\n\ngreet()',
+        task: "Объяви функцию hello, которая выводит слово Привет.",
+        answer: 'def hello():\n    print("Привет!")',
+        hint: "Начни с def hello():, затем добавь print() с отступом."
+      },
+      {
+        title: "Словари",
+        section: "03 · Коллекции данных",
+        text: "Словарь хранит пары «ключ: значение». По ключу можно получить соответствующее значение.",
+        example: 'person = {"name": "Лена", "age": 20}\nprint(person["name"])',
+        task: 'Создай словарь pet с ключом name и значением Rex.',
+        answer: 'pet = {"name": "Rex"}',
+        hint: 'Запиши пару "name": "Rex" внутри фигурных скобок.'
+      },
+      {
+        title: "Обработка ошибок",
+        section: "05 · Надёжный код",
+        text: "Блок try/except позволяет обработать ошибку и не завершать программу неожиданно.",
+        example: 'try:\n    number = int("12")\nexcept ValueError:\n    print("Нужно ввести число")',
+        task: "Напиши конструкцию try/except, которая ловит ValueError.",
+        answer: 'try:\n    number = int("12")\nexcept ValueError:\n    print("Ошибка")',
+        hint: "Сначала try:, затем except ValueError:."
+      },
+      {
+        title: "Итоговый мини-проект",
+        section: "06 · Практика",
+        text: "Время объединить изученные конструкции Python. Используй переменную, условие и вывод результата.",
+        example: 'points = 12\nif points >= 10:\n    print("Уровень пройден!")',
+        task: 'Создай points со значением 12. Если points не меньше 10, выведи Уровень пройден!',
+        answer: 'points = 12\nif points >= 10:\n    print("Уровень пройден!")',
+        hint: "Для условия «не меньше» используется оператор >=."
+      }
+    ];
+
+    const progressKey = "python-course-completed";
+    let completed;
+    let current = 0;
+    let pyodidePromise;
+    let editor;
+
+    try {
+      completed = JSON.parse(localStorage.getItem(progressKey) || "[]");
+      if (!Array.isArray(completed)) completed = [];
+    } catch {
+      completed = [];
+    }
+
+    const welcomeScreen = document.getElementById("welcomeScreen");
+    const courseScreen = document.getElementById("courseScreen");
+    const lessonContent = document.getElementById("lessonContent");
+
+    document.getElementById("startButton").addEventListener("click", () => {
+      welcomeScreen.style.display = "none";
+      courseScreen.style.display = "block";
+      renderLesson();
+      window.scrollTo({ top: 0 });
+    });
+
+    function normalize(text) {
+      return text.trim().replace(/\r/g, "").replace(/[ \t]+/g, " ");
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      })[char]);
+    }
+
+    function updateProgress() {
+      document.getElementById("progressText").textContent =
+        `Урок ${current + 1} из ${lessons.length} · Пройдено: ${completed.length}`;
+
+      document.getElementById("progressBar").style.width =
+        `${(completed.length / lessons.length) * 100}%`;
+    }
+
+    function renderLesson() {
+      const lesson = lessons[current];
+      const isLast = current === lessons.length - 1;
+
+      updateProgress();
+
+      lessonContent.innerHTML = `
+        <div class="topline">${escapeHtml(lesson.section)}</div>
+        <h1>${escapeHtml(lesson.title)}</h1>
+        <p>${escapeHtml(lesson.text)}</p>
+
+        <h2>Пример кода</h2>
+        <pre><code>${escapeHtml(lesson.example)}</code></pre>
+
+        <section class="card">
+          <h2 style="margin-top:0">Твоё задание</h2>
+          <p>${escapeHtml(lesson.task)}</p>
+
+          <textarea id="answer" spellcheck="false"
+            aria-label="Напиши свой ответ"
+            placeholder="Напиши код здесь..."></textarea>
+
+          <div class="terminal">
+            <div class="terminal-title">TERMINAL</div>
+            <pre id="terminalOutput" aria-live="polite">Python готов к запуску.</pre>
+            <button id="runButton" type="button">▶ Запустить код</button>
+          </div>
+
+          <p class="hint">${escapeHtml(lesson.hint)}</p>
+          <button id="checkButton" type="button">Проверить ответ</button>
+          <div id="feedback" aria-live="polite"></div>
+        </section>
+
+        <div class="bottom">
+          <button id="backButton" ${current === 0 ? "disabled" : ""}>
+            ← Назад
+          </button>
+
+          <button id="continueButton" ${isLast ? "disabled" : ""}>
+            ${isLast ? "Курс завершён 🎉" : "Продолжить →"}
+          </button>
+        </div>
+      `;
+
+      editor = CodeMirror.fromTextArea(document.getElementById("answer"), {
+        mode: "python",
+        theme: "material-darker",
+        lineNumbers: true,
+        indentUnit: 4,
+        tabSize: 4,
+        lineWrapping: true
+      });
+
+      document.getElementById("checkButton")
+        .addEventListener("click", checkAnswer);
+
+      document.getElementById("runButton")
+        .addEventListener("click", runCode);
+
+      document.getElementById("backButton").addEventListener("click", () => {
+        if (current > 0) {
+          current--;
+          renderLesson();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+
+      document.getElementById("continueButton").addEventListener("click", () => {
+        if (current < lessons.length - 1) {
+          current++;
+          renderLesson();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    }
+
+    function getPyodide() {
+      if (!pyodidePromise) {
+        pyodidePromise = loadPyodide();
+      }
+      return pyodidePromise;
+    }
+
+    async function runCode() {
+      const output = document.getElementById("terminalOutput");
+      const runButton = document.getElementById("runButton");
+      const code = editor.getValue();
+
+      output.textContent = "Запуск Python…";
+      runButton.disabled = true;
+
+      try {
+        const pyodide = await getPyodide();
+        const lines = [];
+
+        pyodide.setStdout({
+          batched: text => lines.push(text)
+        });
+
+        pyodide.setStderr({
+          batched: text => lines.push(text)
+        });
+
+        await pyodide.runPythonAsync(code);
+
+        output.textContent = lines.length
+          ? lines.join("\n")
+          : "Код выполнен. Вывода нет.";
+      } catch (error) {
+        output.textContent = `Ошибка:\n${error}`;
+      } finally {
+        runButton.disabled = false;
+      }
+    }
+
+    function checkAnswer() {
+      const input = normalize(editor.getValue());
+      const expected = normalize(lessons[current].answer);
+      const feedback = document.getElementById("feedback");
+
+      if (input === expected) {
+        feedback.className = "ok";
+        feedback.textContent = "Верно! Отличная работа — можешь продолжить.";
+
+        if (!completed.includes(current)) {
+          completed.push(current);
+
+          try {
+            localStorage.setItem(progressKey, JSON.stringify(completed));
+          } catch (error) {
+            console.warn("Не удалось сохранить прогресс:", error);
+          }
+
+          updateProgress();
+        }
+      } else {
+        feedback.className = "bad";
+        feedback.textContent =
+          "Ответ пока не совпал с образцом. Проверь синтаксис, кавычки и отступы.";
+      }
+    }
+  </script>
+</body>
+</html>
